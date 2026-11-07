@@ -14,7 +14,7 @@ from .interface.profile import Orders, Profile, Users
 from .interface.rivens import Rivens
 from .models.enums import Language, Platform
 
-DEFAULT_USER_AGENT = "pytenno/2.0.0 (+https://github.com/statikana/pytenno)"
+DEFAULT_USER_AGENT = "pytenno/2.0.1 (+https://github.com/statikana/pytenno)"
 
 
 class PyTenno:

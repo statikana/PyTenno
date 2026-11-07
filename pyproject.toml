@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pytenno"
-version = "2.0.0"
+version = "2.0.1"
 description = "An asynchronous Python wrapper for the warframe.market v2 API."
 authors = ["ShadowMagic896 <peckhamr@outlook.com>"]
 license = "MIT"
