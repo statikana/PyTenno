@@ -1,4 +1,4 @@
-"""Data models for Warframe.market auctions (Riven, Kuva Lich, Sister, Kubrow)."""
+"""Data models for Warframe.market auctions (Riven, Kuva Lich, Sister, and Kubrow)."""
 
 from dataclasses import dataclass
 from datetime import datetime
