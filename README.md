@@ -10,10 +10,10 @@
 
 ## Features
 
-- **Warframe.market v2 Native** — Full coverage of the `/v2` REST endpoints (`/v2/items`, `/v2/item/{slug}`, `/v2/item/{slug}/set`, `/v2/orders/item/{slug}`, `/v2/orders/item/{slug}/top`, `/v2/orders/user/{slug}`, `/v2/orders/my`, `/v2/order`, `/v2/riven/*`, `/v2/lich/*`, `/v2/sister/*`, `/v2/user/*`, `/v2/me`, `/v2/locations`, `/v2/missions`, `/v2/npcs`, `/v2/achievements`, `/v2/versions`).
-- **Async Context Manager** — Clean session lifecycle management via `async with PyTenno() as tenno:`.
-- **Rich Typed Dataclasses** — Every response is deserialized into IDE-friendly Python dataclasses with localized `i18n` fields and convenient properties (`.name`, `.slug`, `.icon`, `.wiki_link`, plus backward-compatible `.url_name` and `.item_name` aliases).
-- **Crossplay & Multi-Platform Support** — Supports `pc`, `ps4`, `xbox`, `switch`, and `mobile` with configurable `Crossplay` and `Language` headers.
+- **Warframe.market v2 Native** Covers all current endpoints (`/v2/items`, `/v2/item/{slug}`, `/v2/item/{slug}/set`, `/v2/orders/item/{slug}`, `/v2/orders/item/{slug}/top`, `/v2/orders/user/{slug}`, `/v2/orders/my`, `/v2/order`, `/v2/riven/*`, `/v2/lich/*`, `/v2/sister/*`, `/v2/user/*`, `/v2/me`, `/v2/locations`, `/v2/missions`, `/v2/npcs`, `/v2/achievements`, `/v2/versions`).
+- **Async Context Manager** `async with PyTenno() as tenno:`.
+- **Rich Typed Dataclasses** Every response is deserialized into IDE-friendly Python dataclasses with localized `i18n` fields and convenient properties (`.name`, `.slug`, `.icon`, `.wiki_link`, plus backward-compatible `.url_name` and `.item_name` aliases).
+- **Crossplay & Multi-Platform Support** Supports `pc`, `ps4`, `xbox`, `switch`, and `mobile` with configurable `Crossplay` and `Language` headers.
 
 ---
 
