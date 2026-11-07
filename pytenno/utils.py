@@ -1,146 +1,110 @@
-"""Module for utility functions used elsewhere in the pytenno package.
+"""Utility functions for PyTenno."""
 
-    Some of these functions are used to convert data types to and from
-    their respective JSON representations.
+import re
+from datetime import datetime
+from typing import Any, Callable, Optional, TypeVar
 
-    There are also a handful of user-friendly functions for common
-    tasks, such as converting a string to a valid url-safe string.
-"""
+T = TypeVar("T")
 
-
-import datetime
-from enum import Enum
-from typing import Any, Callable, Mapping, Type, TypeVar
-from urllib.parse import quote
-
-import aiohttp
-
-from .constants import ASSET_ROOT, VALID_TRANSLATIONS_RAW
-from .errors import BaseError
-from .models.droptable import Drop, RelicRates
-from .models.enums import (AnimationFormat, AuctionMarking, AuctionType,
-                           Element, Faction, IconFormat, ItemRarity,
-                           MeasurementUnit, OrderType, PatreonBadge, Platform,
-                           Polarity, RivenAttributeGroup, RivenWeaponGroup,
-                           RivenWeaponType, Rotation, Stage, Subtype, UserRole,
-                           UserStatus)
+_CAMEL_TO_SNAKE_RE = re.compile(r"(?<!^)(?=[A-Z])")
 
 
-def format_name(name: str):
-    """Converts a string to a valid url-safe string."""
-    return quote(name.lower().replace(" ", "_"))
+def camel_to_snake(name: str) -> str:
+    """Converts a camelCase string to snake_case.
+
+    Parameters
+    ----------
+    name : str
+        The camelCase identifier.
+
+    Returns
+    -------
+    str
+        The snake_case identifier.
+    """
+    return _CAMEL_TO_SNAKE_RE.sub("_", name).lower()
 
 
-def is_formatted_name(name: str):
-    """Checks if a string is a valid formatted name."""
-    return quote(name.replace("_", " ").lower()) == name
+def snake_to_camel(name: str) -> str:
+    """Converts a snake_case string to camelCase.
+
+    Parameters
+    ----------
+    name : str
+        The snake_case identifier.
+
+    Returns
+    -------
+    str
+        The camelCase identifier.
+    """
+    parts = name.split("_")
+    return parts[0] + "".join(word.capitalize() for word in parts[1:])
 
 
-def _raise_error_code(response: aiohttp.ClientResponse, silenced: list[Exception]):
-    """Raises an error based on the response's status code."""
-    code = response.status
+def get_or_none(item: Any,Converter: Callable[[Any], T]) -> Optional[T]:
+    """Applies ``Converter`` to ``item`` if ``item`` is not ``None``.
 
-    for error in BaseError.__subclasses__():
-        if error.code == code:
-            if error not in silenced:
-                raise error
-            return None
+    Parameters
+    ----------
+    item : Any
+        The value to convert.
+    Converter : Callable[[Any], T]
+        The conversion function or enum/class constructor.
 
-    error = BaseError
-    error.code = code
-    error.msg = "Unknown error occurred"
-
-    raise error
-
-
-DATETIME_FORMAT: str = "%Y-%m-%dT%H:%M:%S.%f%z"
+    Returns
+    -------
+    Optional[T]
+    """
+    return None if item is None else Converter(item)
 
 
-# Enums that take in a value and return an enum value
-_ENUM_MAPPING: Mapping[str, Type[Enum]] = {
-    "rarity": ItemRarity,
-    "order_type": OrderType,
-    "element": Element,
-    "patreon_badge": PatreonBadge,
-    "platform": Platform,
-    "role": UserRole,
-    "status": UserStatus,
-    "polarity": Polarity,
-    "riven_type": RivenWeaponType,
-    "icon_format": IconFormat,
-    "animation_format": AnimationFormat,
-    "rotation": Rotation,
-    "type": AuctionType,
-    "is_marked_for": AuctionMarking,
-    "faction": Faction,
-}
+def parse_iso_datetime(value: Optional[str]) -> Optional[datetime]:
+    """Parses an ISO-8601 datetime string from Warframe.market (including trailing ``Z``).
 
-# Enums that require special attention
-_SPECIAL_ENUM_MAPPING: Mapping[str, Callable[[str], Type[Enum]]] = {
-    "subtypes": lambda names: [Subtype[name] for name in names],
-    "exclusive_to": lambda excls: [RivenWeaponGroup[exc] for exc in excls],
-    "units": lambda unit: MeasurementUnit[unit],
-    "group": lambda grp: RivenAttributeGroup[
-        grp
-    ]  # The API is ambigous on this attribute; three different items have the name but can have different values
-    if hasattr(RivenAttributeGroup, grp)
-    else RivenWeaponGroup[grp]
-    if hasattr(RivenWeaponGroup, grp)
-    else grp,
-    "stage": lambda stage: Stage[f"_{stage}" if stage.isdigit() else stage],
-    "is_marked_for": lambda mark: AuctionMarking[mark] if mark is not None else None,
-    "rates": lambda rates: RelicRates(**rates),
-}
+    Parameters
+    ----------
+    value : Optional[str]
+        The ISO-8601 string (e.g., ``"2026-11-07T21:11:22Z"``).
 
-T = TypeVar("T", bound=type)
-
-
-def _from_data(
-    cls_: Type[T], data: dict[str, Any] | list[dict[str, Any]] | None, use_data_method: bool = True
-) -> T:
-    """Partially converts common data types into their object equivalent, then creates an instance of ``cls_``."""
-    if data is None:
+    Returns
+    -------
+    Optional[datetime]
+    """
+    if not value:
         return None
-    
-    if isinstance(data, list):
-        for d in data:
-            d = _format_names(d)
-    else:
-        data = _format_names(data)
-
-    if hasattr(cls_, "_from_data") and use_data_method:
-        return cls_._from_data(data)
-    return cls_(**data)
+    if isinstance(value, datetime):
+        return value
+    normalized = value.replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
 
 
-def _format_names(d: dict):
-    nd = {}  # Create new dict to avoid RuntimeErrors
-    for key, value in d.items():
-        if value is None:
-            continue
-        if key in ("icon", "sub_icon", "thumb", "avatar", "animation", "background"):
-            nd[key] = f"{ASSET_ROOT}/{value}"
-        elif key in (
-            "creation_date",
-            "created",
-            "last_updated",
-            "last_update",
-            "updated",
-            "last_seen",
-            "marked_operation_at",
-        ):
-            nd[key] = datetime.datetime.strptime(value, DATETIME_FORMAT)
-        elif key == "drop":
-            nd[key] = [Drop(**val) for val in value]
-        elif key in {"zh-hans", "zh-hant"}:
-            nd[{"zh-hans": "zh_hans", "zh-hant": "zh_hant"}[key]] = value
-        else:
-            try:
-                nd[key] = _ENUM_MAPPING[key][value]
-            except KeyError:
-                try:
-                    nd[key] = _SPECIAL_ENUM_MAPPING[key](value)
-                except KeyError:
-                    nd[key] = value
-    return nd
+def enum_or_raw(enum_cls: Any, value: Any) -> Any:
+    """Attempts to resolve ``value`` as a member of ``enum_cls``, falling back to ``value``.
 
+    Parameters
+    ----------
+    enum_cls : EnumMeta
+        The target Enum class.
+    value : Any
+        The string or value to look up.
+
+    Returns
+    -------
+    Any
+    """
+    if value is None or isinstance(value, enum_cls):
+        return value
+    if isinstance(value, str):
+        if value in enum_cls.__members__:
+            return enum_cls[value]
+        lower = value.lower()
+        if lower in enum_cls.__members__:
+            return enum_cls[lower]
+        for member in enum_cls:
+            if str(member.value).lower() == lower:
+                return member
+    return value

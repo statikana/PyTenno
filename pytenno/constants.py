@@ -1,37 +1,32 @@
-"""Small module for constants used throughout the PyTenno library."""
+"""Module containing constants used by PyTenno."""
 
-__all__ = ["VALID_LANGUAGES", "MAIN_ROOT", "API_ROOT", "ASSET_ROOT"]
+from typing import Literal
 
-from typing import Final, Literal
+API_ROOT: str = "https://api.warframe.market/v2"
+"""Root URL for the Warframe.market v2 REST API."""
 
-MAIN_ROOT: Final[str] = "https://warframe.market"
-API_ROOT: Final[str] = "https://api.warframe.market/v1"
-ASSET_ROOT: Final[str] = "https://warframe.market/static/assets"
+V1_API_ROOT: str = "https://api.warframe.market/v1"
+"""Root URL for legacy Warframe.market v1 endpoints (e.g., auctions)."""
 
-VALID_LANGUAGES = Literal[
-    "en",
-    "ru",
+WS_ROOT: str = "wss://ws.warframe.market/socket"
+"""Root URL for the Warframe.market v2 WebSocket server."""
+
+ASSETS_ROOT: str = "https://warframe.market/static/assets/"
+"""Root URL for static assets (icons, thumbnails, animations)."""
+
+ValidLanguages = Literal[
     "ko",
-    "fr",
-    "sv",
+    "ru",
     "de",
-    "zh_hans",
-    "zh_hant",
+    "fr",
     "pt",
+    "zh-hans",
+    "zh-hant",
     "es",
+    "it",
     "pl",
+    "uk",
+    "en",
 ]
 
-VALID_TRANSLATIONS_RAW = {
-    "en",
-    "ru",
-    "ko",
-    "fr",
-    "sv",
-    "de",
-    "zh_hans",
-    "zh_hant",
-    "pt",
-    "es",
-    "pl",
-}
+ValidPlatforms = Literal["pc", "ps4", "xbox", "switch", "mobile"]

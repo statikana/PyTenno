@@ -1,24 +1,35 @@
+# Configuration file for the Sphinx documentation builder.
+
 import os
 import sys
 
 sys.path.insert(0, os.path.abspath(".."))
+import pytenno
 
-# Project information
+# -- Project information -----------------------------------------------------
+
 project = "PyTenno"
-author = "Ryan Peckham"
-copyright = f"2022, {author}"
+copyright = "2022-2026, ShadowMagic896 (statikana)"
+author = "ShadowMagic896"
 
+release = pytenno.__version__
+
+# -- General configuration ---------------------------------------------------
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.viewcode",
-    "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
 ]
-html_theme = "sphinx_rtd_theme"
-intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
-    "aiohttp": ("https://aiohttp.readthedocs.io/en/stable/", None),
-}
-source_suffix = ".rst"
-master_doc = "index"
+
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+
+# -- Options for HTML output -------------------------------------------------
+
+html_theme = "furo"
+html_static_path = ["_static"]
+
+# -- Options for Autodoc -----------------------------------------------------
+
+autodoc_member_order = "bysource"

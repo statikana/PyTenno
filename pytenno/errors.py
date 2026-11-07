@@ -1,65 +1,37 @@
-"""Simple module for handling errors.
+"""Module containing custom exception classes raised by PyTenno."""
 
-    This module contains no functions. It is only used to define the
-    Error classes that the other modules use.
-"""
-from dataclasses import dataclass
+from typing import Any, Optional
 
 
-@dataclass
-class BaseError(BaseException):
-    code: int
-    msg: str
-
-    def __init__(self, *args: object) -> None:
-        super().__init__(f"Error [Code {self.code}]: {self.msg}")
+class PyTennoError(Exception):
+    """Base exception class for all PyTenno errors."""
 
 
-class BadRequest(BaseError):
-    code = 400
-    msg = "Bad Request"
+class InvalidResponseError(PyTennoError):
+    """Raised when the Warframe.market API returns an error status or invalid response."""
+
+    def __init__(
+        self,
+        message: str = "Invalid response from Warframe.market API",
+        status_code: Optional[int] = None,
+        api_error: Optional[Any] = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.api_error = api_error
 
 
-class Unauthorized(BaseError):
-    code = 401
-    msg = "Unauthorized"
+class UnauthorizedError(InvalidResponseError):
+    """Raised when an endpoint requires authentication or credentials are invalid (HTTP 401/403)."""
 
 
-class Forbidden(BaseError):
-    code = 403
-    msg = "Forbidden"
+class NotFoundError(InvalidResponseError):
+    """Raised when the requested resource does not exist (HTTP 404)."""
 
 
-class NotFound(BaseError):
-    code = 404
-    msg = "Not Found"
+class RateLimitError(InvalidResponseError):
+    """Raised when the Warframe.market API rate limit is exceeded (HTTP 429)."""
 
 
-class Conflict(BaseError):
-    code = 409
-    msg = "Conflict"
-
-
-class InternalServerError(BaseError):
-    code = 500
-    msg = "Internal Server Error"
-
-
-class NotImplemented(BaseError):
-    code = 501
-    msg = "Not Implemented"
-
-
-class BadGateway(BaseError):
-    code = 502
-    msg = "Bad Gateway"
-
-
-class ServiceUnavailable(BaseError):
-    code = 503
-    msg = "Service Unavailable"
-
-
-class GatewayTimeout(BaseError):
-    code = 504
-    msg = "Gateway Timeout"
+class ValidationError(PyTennoError):
+    """Raised when client-side or server-side request validation fails."""

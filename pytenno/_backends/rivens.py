@@ -1,20 +1,20 @@
+"""Backend for Warframe.market v2 Riven endpoints."""
+
 from ..models.rivens import RivenAttribute, RivenItem
-from ..utils import _from_data
-from .core import BackendAdapter
+from .core import RequestBackend
 
 
-class RivensBackend(BackendAdapter):
-    async def _get_riven_items(self, language):
-        url = "/riven/items"
-        headers = {"Language": language}
-        response = await self._backend._request(url, headers=headers)
-        return [_from_data(RivenItem, node) for node in response["payload"]["items"]]
+class RivensBackend(RequestBackend):
+    """Backend methods for `/v2/riven/weapons`, `/v2/riven/weapon/{slug}`, and `/v2/riven/attributes`."""
 
-    async def _get_riven_attributes(self, language):
-        url = "/riven/attributes"
-        headers = {"Language": language}
-        response = await self._backend._request(url, headers=headers)
-        return [
-            _from_data(RivenAttribute, node)
-            for node in response["payload"]["attributes"]
-        ]
+    async def _get_weapons(self) -> list[RivenItem]:
+        data = await self._get("/riven/weapons")
+        return [RivenItem._from_data(item) for item in data]
+
+    async def _get_weapon(self, slug: str) -> RivenItem:
+        data = await self._get(f"/riven/weapon/{slug}")
+        return RivenItem._from_data(data)
+
+    async def _get_attributes(self) -> list[RivenAttribute]:
+        data = await self._get("/riven/attributes")
+        return [RivenAttribute._from_data(attr) for attr in data]

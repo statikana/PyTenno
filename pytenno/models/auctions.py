@@ -1,135 +1,192 @@
+"""Data models for Warframe.market auctions (Riven, Kuva Lich, Sister, Kubrow)."""
+
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Union
+from typing import Any, Optional, Union
 
-from ..utils import _from_data
-from .enums import AuctionMarking, AuctionType, Element, Platform, Polarity
-from .rivens import PartialRivenAttribute
+from ..utils import enum_or_raw, parse_iso_datetime
+from .enums import AuctionType, Element, Platform, Polarity, RivenStat
 from .users import UserShort
 
 
-@dataclass(kw_only=True)
-class AuctionEntry:
-    """Represents an auction entry."""
-
-    id: str
-    """The ID of the auction entry."""
-    minimal_reputation: int
-    """The minimal reputation required to bid on the auction."""
-    winner: str | None = None
-    """The ID of the winner of the auction, if any."""
-    private: bool
-    """Whether the auction is private or not."""
-    visible: bool
-    """Whether the auction is visible or not."""
-    note_raw: str
-    """The raw note of the auction."""
-    note: str
-    """The note of the auction entry."""
-    owner: str
-    """The ID of the owner of the auction."""
-    starting_price: int
-    """The starting price of the auction."""
-    buyout_price: int | None = None
-    """The buyout price of the auction, if any."""
-    minimal_increment: int | None = None
-    """The minimal increment for bids, if any."""
-    is_direct_sell: bool
-    """Whether the auction is a direct sell or not."""
-    top_bid: int | None = None
-    """The highest bid on the auction, if any."""
-    created: datetime
-    """The date and time the auction was created."""
-    updated: datetime
-    """The date and time the auction entry was created."""
-    platform: Platform
-    """The platform the auction is on."""
-    closed: bool
-    """Whether the auction is closed or not."""
-    is_marked_for: AuctionMarking | None = None
-    """Whether the auction is marked for a specific action."""
-    marked_operation_for: datetime | None = None
-    """The time when the auction was marked for a specific operation."""
-    item: Union["RivenAuction", "LichAuction", "KubrowAuction"]
-    """The item of the auction."""
-
-
 @dataclass
-class AuctionEntryExpanded(AuctionEntry):
-    """Same as `AuctionEntry`, but with a full user model for ``.owner``"""
+class AuctionRivenStat:
+    """Represents a single stat modifier on an auctioned Riven."""
 
-    owner: UserShort
-    """The owner of the auction."""
+    url_name: RivenStat | str
+    """The stat identifier."""
+    positive: bool
+    """Whether the stat is positive."""
+    value: int | float
+    """The numerical value of the stat."""
 
-    def _from_data(node: dict):
-        # deepcode ignore
-        return AuctionEntryExpanded(
-            # file deepcode ignore WrongNumberOfArguments
-            owner=_from_data(UserShort, node.pop("owner")),
-            item=_from_data(RivenAuction, item)
-            if (t := (item := node.pop("item"))["type"]) == "riven"
-            else _from_data(LichAuction, item)
-            if t == "lich"
-            else _from_data(KubrowAuction, item),
-            **node,
+    @classmethod
+    def _from_data(cls, data: dict[str, Any]) -> "AuctionRivenStat":
+        return cls(
+            url_name=enum_or_raw(RivenStat, data.get("url_name")),
+            positive=bool(data.get("positive", True)),
+            value=data.get("value", 0),
         )
-
-
-@dataclass(kw_only=True)
-class LichAuction:
-    """Represents a lich auction."""
-
-    type: AuctionType  # lich
-    """The type of the auction. In this case, ``lich``."""
-    weapon_url_name: str
-    """The URL name of the weapon."""
-    element: Element
-    """The element of the weapon."""
-    damage: int
-    """The damage of the weapon."""
-    having_ephemera: bool
-    """Whether the weapon has an ephemera."""
-    quirk: str | None = None
-    """The quirk of the lich, if any."""
-    name: str | None = None
-    """The name of the lich. Unused by the API."""
-
-
-@dataclass
-class KubrowAuction:
-    """Represents a kubrow auction."""
-
-    type: AuctionType
-    """The type of the auction. In this case, ``kubrow``."""
-    name: str
-    """The name of the kubrow."""
 
 
 @dataclass
 class RivenAuction:
-    """Represents a riven auction."""
+    """Represents a Riven item in an auction."""
 
     type: AuctionType
-    """The type of the auction. In this case, ``riven``."""
-    attributes: list[PartialRivenAttribute]
-    """The attributes of the riven."""
-    name: str
-    """The name of the riven."""
-    mastery_level: int
-    """The mastery level of the riven."""
-    re_rolls: int
-    """The number of times the riven has been rerolled."""
+    """The type of the auction (`AuctionType.riven`)."""
     weapon_url_name: str
-    """The URL of the weapon the riven is for."""
-    polarity: Polarity
-    """The polarity of the riven."""
+    """The URL slug of the weapon the Riven is for."""
+    name: str
+    """The suffix/prefix name of the Riven (e.g., ``"cori-gelicron"``)."""
+    mastery_level: int
+    """The Mastery Rank required to use the Riven."""
+    re_rolls: int
+    """The number of times the Riven has been re-rolled."""
+    polarity: Polarity | str
+    """The polarity of the Riven."""
+    attributes: list[AuctionRivenStat]
+    """The stats on the Riven."""
     mod_rank: int
-    """The rank of the riven."""
+    """The current upgrade rank of the Riven."""
 
-    def _from_data(node: dict):
-        return RivenAuction(
+    @classmethod
+    def _from_data(cls, data: dict[str, Any]) -> "RivenAuction":
+        return cls(
+            type=enum_or_raw(AuctionType, data.get("type", "riven")),
+            weapon_url_name=data.get("weapon_url_name", ""),
+            name=data.get("name", ""),
+            mastery_level=int(data.get("mastery_level", 0)),
+            re_rolls=int(data.get("re_rolls", 0)),
+            polarity=enum_or_raw(Polarity, data.get("polarity", "any")),
             attributes=[
-                _from_data(PartialRivenAttribute, x) for x in node.pop("attributes")
+                AuctionRivenStat._from_data(attr) for attr in (data.get("attributes") or [])
             ],
-            **node,
+            mod_rank=int(data.get("mod_rank", 0)),
         )
+
+
+@dataclass
+class LichAuction:
+    """Represents a Kuva Lich or Sister of Parvos in an auction."""
+
+    type: AuctionType
+    """The type of the auction (`AuctionType.lich` or `AuctionType.sister`)."""
+    weapon_url_name: str
+    """The URL slug of the weapon."""
+    element: Element | str
+    """The elemental bonus type."""
+    damage: int
+    """The elemental bonus damage percentage."""
+    having_ephemera: Optional[bool] = None
+    """Whether the Lich/Sister has an ephemera."""
+    quirk: Optional[str] = None
+    """The quirk of the Lich/Sister, if any."""
+    name: Optional[str] = None
+    """The name of the Lich/Sister."""
+
+    @classmethod
+    def _from_data(cls, data: dict[str, Any]) -> "LichAuction":
+        return cls(
+            type=enum_or_raw(AuctionType, data.get("type", "lich")),
+            weapon_url_name=data.get("weapon_url_name", ""),
+            element=enum_or_raw(Element, data.get("element", "impact")),
+            damage=int(data.get("damage", 0)),
+            having_ephemera=data.get("having_ephemera"),
+            quirk=data.get("quirk"),
+            name=data.get("name"),
+        )
+
+
+@dataclass
+class KubrowAuction:
+    """Represents a Kubrow imprint in an auction."""
+
+    type: AuctionType
+    """The type of the auction (`AuctionType.kubrow`)."""
+    name: str
+    """The name/type of the Kubrow."""
+
+    @classmethod
+    def _from_data(cls, data: dict[str, Any]) -> "KubrowAuction":
+        return cls(
+            type=enum_or_raw(AuctionType, data.get("type", "kubrow")),
+            name=data.get("name", ""),
+        )
+
+
+def _item_from_data(
+    item: dict[str, Any],
+) -> Union[RivenAuction, LichAuction, KubrowAuction]:
+    item_type = item.get("type")
+    if item_type == "riven":
+        return RivenAuction._from_data(item)
+    if item_type in ("lich", "sister"):
+        return LichAuction._from_data(item)
+    return KubrowAuction._from_data(item)
+
+
+@dataclass
+class AuctionEntry:
+    """Represents an auction entry on Warframe.market."""
+
+    id: str
+    minimal_reputation: int
+    winner: Optional[str]
+    private: bool
+    visible: bool
+    note_raw: str
+    note: str
+    owner: Union[UserShort, str]
+    starting_price: int
+    buyout_price: Optional[int]
+    minimal_increment: Optional[int]
+    is_direct_sell: bool
+    top_bid: Optional[int]
+    created: Optional[datetime]
+    updated: Optional[datetime]
+    platform: Platform | str
+    closed: bool
+    is_marked_for: Optional[str]
+    marked_operation_at: Optional[datetime]
+    item: Union[RivenAuction, LichAuction, KubrowAuction]
+    crossplay: bool = True
+
+    @classmethod
+    def _from_data(cls, data: dict[str, Any]) -> "AuctionEntry":
+        raw_owner = data.get("owner")
+        owner = (
+            UserShort._from_data(raw_owner)
+            if isinstance(raw_owner, dict)
+            else (raw_owner or "")
+        )
+        return cls(
+            id=data.get("id", ""),
+            minimal_reputation=int(data.get("minimal_reputation", 0)),
+            winner=data.get("winner"),
+            private=bool(data.get("private", False)),
+            visible=bool(data.get("visible", True)),
+            note_raw=data.get("note_raw", ""),
+            note=data.get("note", ""),
+            owner=owner,
+            starting_price=int(data.get("starting_price", 0)),
+            buyout_price=data.get("buyout_price"),
+            minimal_increment=data.get("minimal_increment"),
+            is_direct_sell=bool(data.get("is_direct_sell", False)),
+            top_bid=data.get("top_bid"),
+            created=parse_iso_datetime(data.get("created")),
+            updated=parse_iso_datetime(data.get("updated")),
+            platform=enum_or_raw(Platform, data.get("platform", "pc")),
+            closed=bool(data.get("closed", False)),
+            is_marked_for=data.get("is_marked_for"),
+            marked_operation_at=parse_iso_datetime(data.get("marked_operation_at")),
+            item=_item_from_data(data.get("item") or {}),
+            crossplay=bool(data.get("crossplay", True)),
+        )
+
+
+@dataclass
+class AuctionEntryExpanded(AuctionEntry):
+    """Represents an auction entry with an expanded :class:`UserShort` owner."""
+
+    owner: UserShort

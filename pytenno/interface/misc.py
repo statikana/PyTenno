@@ -1,25 +1,34 @@
-"""Module holding the Misc. interface class."""
+"""Module holding the Misc interface class."""
 
 from typing import Optional
 
 from .._backends.misc import MiscBackend
-from ..constants import VALID_LANGUAGES
 from ..models.locations import Location
-from ..models.missions import DroptableNPC, PartialMission
+from ..models.missions import DashboardShowcase, Mission, Npc, Versions
+from ..models.users import Achievement
 
 
 class Misc(MiscBackend):
-    """Class for the misc backends."""
+    """Interface for Warframe.market v2 manifest versions, locations, missions, NPCs, achievements, and showcase."""
 
-    async def get_locations(
-        self, language: Optional[VALID_LANGUAGES] = None
-    ) -> list[Location]:
-        """Gets a list of all locations.
+    async def get_versions(self) -> Versions:
+        """Fetches current server resource and manifest collection versions (`GET /v2/versions`).
 
-        Parameters
-        ----------
-        language : Optional[VALID_LANGUAGES]
-            The language of the locations. Default: ``None``, meaning the default set during client construction.
+        Returns
+        -------
+        Versions
+            Object containing mobile app versions and collection hash strings.
+
+        Example
+        -------
+        >>> async with PyTenno() as tenno:
+        ...     versions = await tenno.misc.get_versions()
+        ...     print(versions.collections.items, versions.updated_at)
+        """
+        return await self._get_versions()
+
+    async def get_locations(self) -> list[Location]:
+        """Fetches all Warframe star chart locations (`GET /v2/locations`).
 
         Returns
         -------
@@ -27,55 +36,101 @@ class Misc(MiscBackend):
 
         Example
         -------
-        >>> async with PyTenno() as pytenno:
-        >>>     locations = await pytenno.misc.get_locations()
-        >>>     for location in locations:
-        >>>         print(location.node_name)
+        >>> async with PyTenno() as tenno:
+        ...     locations = await tenno.misc.get_locations()
+        ...     for loc in locations[:5]:
+        ...         print(loc.node_name, loc.system_name, loc.faction)
         """
-        return await self._get_locations(language)
+        return await self._get_locations()
 
-    async def get_npcs(
-        self, language: Optional[VALID_LANGUAGES] = None
-    ) -> list[DroptableNPC]:
-        """Gets a list of all NPCs.
-
-        Parameters
-        ----------
-        language : Optional[VALID_LANGUAGES]
-            The language of the NPCs. Default: ``None``, meaning the default set during client construction.
+    async def get_missions(self) -> list[Mission]:
+        """Fetches all Warframe missions (`GET /v2/missions`).
 
         Returns
         -------
-        list[NPC]
+        list[Mission]
 
         Example
         -------
-        >>> async with PyTenno() as pytenno:
-        >>>     npcs = await pytenno.misc.get_npcs()
-        >>>     for npc in npcs:
-        >>>         print(npc.name)
+        >>> async with PyTenno() as tenno:
+        ...     missions = await tenno.misc.get_missions()
+        ...     for mission in missions[:5]:
+        ...         print(mission.name, mission.slug)
         """
-        return await self._get_npcs(language)
+        return await self._get_missions()
 
-    async def get_missions(
-        self, language: Optional[VALID_LANGUAGES] = None
-    ) -> list[PartialMission]:
-        """Gets a list of all missions.
-
-        Parameters
-        ----------
-        language : Optional[VALID_LANGUAGES]
-            The language of the missions. Default: ``None``, meaning the default set during client construction.
+    async def get_npcs(self) -> list[Npc]:
+        """Fetches all Warframe NPCs (`GET /v2/npcs`).
 
         Returns
         -------
-        list[PartialMission]
+        list[Npc]
 
         Example
         -------
-        >>> async with PyTenno() as pytenno:
-        >>>     missions = await pytenno.misc.get_missions()
-        >>>     for mission in missions:
-        >>>         print(mission.name)
+        >>> async with PyTenno() as tenno:
+        ...     npcs = await tenno.misc.get_npcs()
+        ...     for npc in npcs[:5]:
+        ...         print(npc.name, npc.slug)
         """
-        return await self._get_missions(language)
+        return await self._get_npcs()
+
+    async def get_achievements(self) -> list[Achievement]:
+        """Fetches all non-secret Warframe.market achievements (`GET /v2/achievements`).
+
+        Returns
+        -------
+        list[Achievement]
+        """
+        return await self._get_achievements()
+
+    async def get_user_achievements(
+        self,
+        slug: str,
+        *,
+        featured: Optional[bool] = None,
+    ) -> list[Achievement]:
+        """Fetches achievements unlocked by a user via their slug (`GET /v2/achievements/user/{slug}`).
+
+        Parameters
+        ----------
+        slug : str
+            The URL-friendly slug of the user.
+        featured : bool, optional
+            If ``True``, returns only featured achievements.
+
+        Returns
+        -------
+        list[Achievement]
+        """
+        return await self._get_user_achievements(slug, featured=featured)
+
+    async def get_user_achievements_by_id(
+        self,
+        user_id: str,
+        *,
+        featured: Optional[bool] = None,
+    ) -> list[Achievement]:
+        """Fetches achievements unlocked by a user via their user ID (`GET /v2/achievements/userId/{user_id}`).
+
+        Parameters
+        ----------
+        user_id : str
+            The unique ID of the user.
+        featured : bool, optional
+            If ``True``, returns only featured achievements.
+
+        Returns
+        -------
+        list[Achievement]
+        """
+        return await self._get_user_achievements_by_id(user_id, featured=featured)
+
+    async def get_dashboard_showcase(self) -> DashboardShowcase:
+        """Fetches the featured items showcase (`GET /v2/dashboard/showcase`).
+
+        Returns
+        -------
+        DashboardShowcase
+        """
+        return await self._get_dashboard_showcase()

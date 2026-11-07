@@ -1,44 +1,62 @@
+"""Backend for Warframe.market authentication endpoints."""
+
+from typing import Optional
+from urllib.parse import quote_plus
+
+from aiohttp import ClientResponse
+
 from ..models.users import CurrentUser
-from ..utils import _from_data
-from .core import BackendAdapter
+from .core import RequestBackend
 
 
-class AuthBackend(BackendAdapter):
+class AuthBackend(RequestBackend):
+    """Backend methods for authentication (`signin`, `signout`, `restore`)."""
+
     async def _login(
         self,
         email: str,
         password: str,
-        device_id: str,
-    ):
-        url = "/auth/signin"
-        data = {
-            "auth_type": "header",
-            "email": email,
-            "password": password,
-            "device_id": device_id,
-        }
-        response = await self._backend._request(url, json=data, method="post")
-        return _from_data(CurrentUser, response["payload"]["user"])
+        device_id: Optional[str] = None,
+    ) -> CurrentUser:
+        response: ClientResponse = await self._post(
+            "/auth/signin",
+            api_version="v1",
+            return_raw_response=True,
+            headers={"Authorization": ""},
+            email=quote_plus(email),
+            password=quote_plus(password),
+            auth_type="header",
+            device_id=device_id,
+        )
+        auth_header = response.headers.get("Authorization") or response.headers.get(
+            "authorization"
+        )
+        if auth_header:
+            token = (
+                auth_header[4:]
+                if auth_header.upper().startswith("JWT ")
+                or auth_header.upper().startswith("BEARER ")
+                else auth_header
+            ).strip()
+            if token.lower().startswith("er "):
+                token = token[3:].strip()
+            self.core.set_token(token)
 
-    async def _register(
-        self, email: str, password: str, region: str, device_id: str, recaptcha: str
-    ):
-        url = "/auth/registration"
-        data = {
-            "auth_type": "header",
-            "email": email,
-            "password": password,
-            "region": region,
-            "device_id": device_id,
-            "recaptcha": recaptcha,
-        }
-        response = await self._backend._request(url, json=data, method="post")
-        return _from_data(CurrentUser, response)
+        payload = await response.json(content_type=None)
+        user_data = (
+            payload.get("data")
+            or payload.get("payload", {}).get("user")
+            or payload
+        )
+        return CurrentUser._from_data(user_data)
 
-    async def _restore(self, email: str):
-        url = "/auth/restore"
-        data = {
-            "email": email,
-        }
-        await self._backend._request(url, json=data, method="post")
-        return None
+    async def _signout(self) -> None:
+        await self._post("/auth/signout", api_version="v2")
+        self.core.set_token(None)
+
+    async def _restore(self, email: str) -> None:
+        await self._post(
+            "/auth/restore",
+            api_version="v1",
+            email=quote_plus(email),
+        )

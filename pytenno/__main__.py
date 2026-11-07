@@ -1,67 +1,56 @@
+"""CLI entry point for PyTenno (`python -m pytenno`)."""
+
 import argparse
 import os
 
 from . import __version__
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(
+    prog="pytenno",
+    description="Asynchronous Python wrapper for the Warframe.market v2 API.",
+)
 parser.add_argument("--version", action="version", version=__version__)
-# Create an argument to create a file using basic features of PyTenno
-parser.add_argument("--example", action="store_true", help="Create an example file")
-
+parser.add_argument(
+    "--example",
+    action="store_true",
+    help="Create a quickstart example.py file demonstrating Warframe.market v2 endpoints.",
+)
 
 args = parser.parse_args()
-if isinstance(args, argparse.Namespace):
-    if args.example:
-        location = input(
-            "Please enter a directory in which to save the example file:\n  | "
-        )
-        path = os.path.abspath(location)
-        if not os.path.exists(path):
-            os.makedirs(path, exist_ok=True)
-        path = os.path.join(path, "example.py")
-        with open(path, "w") as f:
-            example = """
-# Import asyncio to use async/await
+if isinstance(args, argparse.Namespace) and args.example:
+    location = input(
+        "Please enter a directory in which to save the example file:\n  | "
+    )
+    path = os.path.abspath(location)
+    os.makedirs(path, exist_ok=True)
+    path = os.path.join(path, "example.py")
+    example = '''"""Example script demonstrating PyTenno with the Warframe.market v2 API."""
+
 import asyncio
+from pytenno import Language, Platform, PyTenno
 
-# Import pytenno to use the PyTenno class
-import pytenno
 
-# Import the Platform enum to specify the default platform to scan on
-from pytenno.models.enums import Platform
-
-# Set the defaults for the client. These are not always 
-# applicable (such as in this example, where everything is given anyways)
-# They are also optional.
-defualt_language = "en"
-default_platform = Platform.pc
-
-async def main():
-    async with pytenno.PyTenno(
-        default_language=defualt_language,
-        default_platform=default_platform,
+async def main() -> None:
+    async with PyTenno(
+        default_language=Language.en,
+        default_platform=Platform.pc,
     ) as tenno:
-        # Use the 'items' interface on the client
-        # All methods are split up into the following interfaces:
-        #   - auction_entries
-        #   - auctions
-        #   - auth
-        #   - items
-        #   - liches
-        #   - misc
-        #   - profile
-        #   - rivens
+        # 1. Fetch an item and its set parts
+        item_set = await tenno.items.get_item_set("mirage_prime_set")
+        print(f"Set parts for {item_set.root.name}:")
+        for part in item_set.items:
+            print(f"  - {part.name} ({part.slug}) | Ducats: {part.ducats}")
 
-        # This method returns not only the item, but also items
-        # that are similar to the given item, ie. item of the same
-        # set.
-        items = await tenno.items.get_item("mirage prime set")
-        for item in items:
-            print(item.en.item_name)
+        # 2. Fetch the top 5 online sell and buy orders
+        top_orders = await tenno.items.get_top_orders("mirage_prime_set")
+        print("\\nTop 5 Online Sell Orders:")
+        for order in top_orders.sell:
+            print(f"  - {order.user.ingame_name}: {order.platinum}p (x{order.quantity})")
 
-asyncio.run(main())
-"""
-            f.write(example)
-            print(f"Example file created at {path}.")
-else:
-    print(args)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+'''
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(example)
+    print(f"Example file created at {path}.")
